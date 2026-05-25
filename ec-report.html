@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>法人EC 体験レポート自動生成</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:#f5f4f0;color:#1a1a1a;min-height:100vh;padding:2rem 1rem}
+.app{max-width:860px;margin:0 auto}
+h1{font-size:18px;font-weight:500;margin-bottom:1.5rem}
+.section-card{background:#fff;border:0.5px solid #e0dfd8;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.section-title{font-size:12px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.75rem}
+.badge{font-size:11px;padding:2px 8px;border-radius:6px;background:#e8f0fe;color:#1a56db;margin-left:6px}
+label{display:block;font-size:13px;color:#666;margin-bottom:4px}
+textarea{width:100%;font-size:14px;padding:10px 12px;border:0.5px solid #d8d7d0;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none;resize:vertical;line-height:1.7;transition:border-color .15s}
+textarea:focus{border-color:#888}
+.hint{font-size:12px;color:#aaa;margin-top:6px;line-height:1.6}
+.generate-btn{width:100%;padding:14px;font-size:15px;font-weight:500;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-top:1rem;transition:opacity .15s}
+.generate-btn:hover{opacity:.85}
+.generate-btn:disabled{opacity:.4;cursor:not-allowed}
+.result-card{background:#f5f4f0;border:0.5px solid #e0dfd8;border-radius:12px;padding:1.25rem;margin-top:1rem}
+.result-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.result-title{font-size:12px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.07em}
+.copy-btn{font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer;background:#fff;border:0.5px solid #d8d7d0;color:#1a1a1a;transition:background .15s}
+.copy-btn:hover{background:#ebe9e0}
+.result-text{font-size:14px;line-height:1.9;white-space:pre-wrap}
+.loading{display:flex;align-items:center;gap:8px;font-size:14px;color:#888;padding:1rem 0}
+.dot{width:6px;height:6px;border-radius:50%;background:#bbb;animation:bounce .9s infinite}
+.dot:nth-child(2){animation-delay:.15s}
+.dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+hr{border:none;border-top:0.5px solid #e0dfd8;margin:1rem 0}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>法人EC 体験レポート自動生成</h1>
+
+<div class="section-card">
+  <div class="section-title">企業情報 <span class="badge">スプレッドシートからコピペ</span></div>
+  <textarea id="company_info" style="min-height:130px" placeholder="企業情報をそのまま貼り付けてください。形式は自由です。
+
+例）
+企業名：株式会社サンプルデータ
+受講コース：IT英語 90日・週2
+受講期間：6月上旬〜9月末
+受講形態：併用（オンライン中心）
+外部テスト：VERSANT 2回
+英会話ブースト：あり・3セット
+目的：2026年9月海外赴任前研修
+レポート提出：3ヶ月後"></textarea>
+  <p class="hint">項目名がなくてもOKです。スプレッドシートの行をそのままコピペしても読み取れます。</p>
+</div>
+
+<div class="section-card">
+  <div class="section-title">体験レッスン文字起こし <span class="badge">Zoomからコピペ</span></div>
+  <textarea id="transcript" style="min-height:180px" placeholder="Zoomのフルトランスクリプト（.txt）の内容をそのまま貼り付けてください。
+
+AIが以下を自動で読み取ります：
+・生徒氏名・年齢・性別・学習歴
+・お人柄・コミュニケーションの様子
+・課題（①②③形式で抽出）
+・目標（定量・定性）
+・緊急度・開始時期
+・備考・その他気づき"></textarea>
+</div>
+
+<button class="generate-btn" id="genBtn" onclick="generate()">レポートを自動生成する</button>
+<div id="output"></div>
+</div>
+
+<script>
+async function generate() {
+  const btn = document.getElementById('genBtn');
+  const out = document.getElementById('output');
+  const company_info = document.getElementById('company_info').value.trim();
+  const transcript = document.getElementById('transcript').value.trim();
+
+  if (!transcript) {
+    out.innerHTML = '<div class="result-card"><p style="color:#c0392b;font-size:14px">体験レッスンの文字起こしを入力してください。</p></div>';
+    return;
+  }
+
+  btn.disabled = true;
+  out.innerHTML = '<div class="result-card"><div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span>AIがレポートを生成中です...</span></div></div>';
+
+  const prompt = `あなたは英語スクールの法人営業担当アシスタントです。
+以下の【企業情報】と【体験レッスン文字起こし】をもとに、指定のフォーマット通りに体験レポートを作成してください。
+
+【企業情報】
+${company_info || '（未入力）'}
+
+【体験レッスン文字起こし】
+${transcript}
+
+---
+【作成ルール】
+・フォーマットの項目順・表記を必ず守ること
+・文字起こしや企業情報から読み取れない項目は「（要確認）」と記載
+・課題：文字起こしからトレーナーが参加者本人に伝えた課題を①②③…形式で簡潔に抽出
+・お人柄：文字起こしから参加者の態度・反応・コミュニケーションの様子を具体的に記載
+・目標【定量】：参加者の発言からスコア目標などを抽出（なければ「特に無し」）
+・目標【定性】：参加者の発言から定性的な目標・背景を抽出
+・備考：企業固有メモ・文字起こしから気づいた点を自然な文体でまとめる
+・課題欄の下に補足説明があれば1〜2文で追記する
+
+【出力フォーマット】
+＜法人EC体験レポート＞
+生徒氏名：
+企業：
+体験実施日：
+体験実施形態：
+現在（TOEICスコア）：
+現状（トレーナー体感）：
+目標【定量】：
+目標【定性】：
+緊急度：
+英語学習歴：
+年齢・性別：
+お人柄：
+新人トレーナー可否：
+
+課題：
+
+教材リスト：添付
+既にお持ちの教材：なし
+受講形態：
+受講コース：
+英会話ブースト有無：
+シニアトレーナーオプション：
+外部効果測定：
+スタジオ：EC
+LINE登録先：EC
+開始時期：
+スケジュール：
+備考：`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        messages: [{role: 'user', content: prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.map(b => b.text || '').join('') || 'エラーが発生しました。';
+    out.innerHTML = `<div class="result-card">
+      <div class="result-header">
+        <div class="result-title">生成されたレポート</div>
+        <button class="copy-btn" onclick="copyText()" id="copyBtn">コピー</button>
+      </div>
+      <hr>
+      <div class="result-text" id="resultText">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    </div>`;
+  } catch(e) {
+    out.innerHTML = '<div class="result-card"><p style="color:#c0392b;font-size:14px">エラーが発生しました。もう一度お試しください。</p></div>';
+  }
+  btn.disabled = false;
+}
+
+function copyText() {
+  const text = document.getElementById('resultText')?.innerText;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.innerText = 'コピー済み！';
+    setTimeout(() => { btn.innerText = 'コピー'; }, 2000);
+  });
+}
+</script>
+</body>
+</html>
